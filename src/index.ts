@@ -319,12 +319,18 @@ async function updateTags() : Promise<GraphUpdate> {
 
   let tags = await dataManager.getTags();
 
+  let parentTagIndex = new Map<string, [Tag]>();
   let updatedTagIndex = new Map<string, Tag>();
   const results = await Promise.all(Array.from(tags).map( tag => dataManager.getNodeIdsForTag(tag)));
-  results.forEach( (nodeIds, index) => 
+  results.forEach( (nodeIds, index) => {
     updatedTagIndex.set(tags[index].label, {... tags[index], nodeIds: nodeIds})
-  );
-  
+    if (tags[index].parentId) {
+      if(!!parentTagIndex.get(tags[index].parentId))
+        parentTagIndex.get(tags[index].parentId).push(tags[index])
+      else
+        parentTagIndex.set(tags[index].parentId,[tags[index]])
+    }
+  })
   const graphUpdate = new GraphUpdate(graphId);
 
   graph.tagIndex.forEach( (value, key) => {
@@ -354,7 +360,7 @@ async function updateTags() : Promise<GraphUpdate> {
       node.label = tag.label;
       node.type = NODE_TYPE.TAG;
       node.tags = new Set([tag.label]);
-      
+
       node.rel = tag.nodeIds.map(nodeId => new Link(tag.id, nodeId, "TAG"));
 
       graph.nodes.set(tag.id, node);
@@ -363,6 +369,22 @@ async function updateTags() : Promise<GraphUpdate> {
     }
   });
 
+  graphUpdate.add.forEach((node: Node)=>{
+    let childrenTags = parentTagIndex.get(node.id)
+    if(!childrenTags) {
+      childrenTags.forEach((tag: Tag) => {
+        node.rel.push(new Link(node.id, tag.id, "TAG"))
+      })
+    }
+  })
+  graphUpdate.update.forEach((node: Node)=>{
+    let childrenTags = parentTagIndex.get(node.id)
+    if(!!childrenTags) {
+      childrenTags.forEach((tag: Tag) => {
+        node.rel.push(new Link(node.id, tag.id, "TAG"))
+      })
+    }
+  })
   if(!graphUpdate.isEmpty()) {
     graphUpdate.tagIndex = updatedTagIndex;
   }
