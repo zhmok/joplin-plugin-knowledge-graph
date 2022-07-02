@@ -41,15 +41,15 @@ export default class JoplinDataApi {
     public async getTags() : Promise<Tag[]> {
         let tags = [];
         let page : any;
-        let query = {fields: ["id", "title"]};
+        let query = {fields: ["id", "title","parent_id"]};
         do {
             page = await joplin.data.get(['tags'], query);
             tags.push(...page.items.map( (item : any) => { 
-                return {id: item.id, label: item.title } 
+                return {id: item.id, label: item.title, parentId: item.parent_id } 
             }));
         }
         while (page.has_more)
-
+        
         return tags;
     }
 

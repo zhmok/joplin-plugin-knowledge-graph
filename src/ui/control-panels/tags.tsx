@@ -22,6 +22,7 @@ export const TagsFilter = (props : PropType) => {
     return {
       id: tag.label,
       text: `${tag.label} (${tag.nodeIds.length})`,
+      parentId: tag.parentId
     };
   });
 
